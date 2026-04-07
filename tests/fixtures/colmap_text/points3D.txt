@@ -1,0 +1,1 @@
+# Empty points fixture for Phase 1 parsing
