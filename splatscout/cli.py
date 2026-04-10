@@ -23,6 +23,14 @@ def _run_analyze(
     mode: str | None,
     recursive: bool,
     fps: float,
+    quality: bool,
+    blur_threshold: float,
+    exposure_min: float,
+    exposure_max: float,
+    clipped_threshold: float,
+    noise_threshold: float,
+    sky_threshold: float,
+    flagged_only: bool,
     json_output: bool,
     output: str | None,
     strict: bool,
@@ -33,18 +41,25 @@ def _run_analyze(
         recursive=recursive,
         fps=fps,
         strict=strict,
+        quality=quality,
+        blur_threshold=blur_threshold,
+        exposure_min=exposure_min,
+        exposure_max=exposure_max,
+        clipped_threshold=clipped_threshold,
+        noise_threshold=noise_threshold,
+        sky_threshold=sky_threshold,
     )
     report = analyze_path(Path(input_path), config=config, mode=mode)
 
     if json_output:
         if output:
             write_json_report(report, Path(output))
-            sys.stdout.write(render_terminal_report(report))
+            sys.stdout.write(render_terminal_report(report, flagged_only=flagged_only))
         else:
             sys.stdout.write(render_json_report(report))
             sys.stdout.write("\n")
     else:
-        sys.stdout.write(render_terminal_report(report))
+        sys.stdout.write(render_terminal_report(report, flagged_only=flagged_only))
 
     if strict and report.has_errors:
         return 2
@@ -64,6 +79,14 @@ if typer is not None:
         mode: str | None = typer.Option(None, help="Force the input mode."),
         recursive: bool = typer.Option(False, help="Scan subdirectories for images."),
         fps: float = typer.Option(2.0, help="Video frame extraction rate."),
+        quality: bool = typer.Option(False, help="Run OpenCV-based image quality analysis."),
+        blur_threshold: float = typer.Option(80.0, help="Flag images below this blur score."),
+        exposure_min: float = typer.Option(0.20, help="Flag images below this normalized exposure mean."),
+        exposure_max: float = typer.Option(0.80, help="Flag images above this normalized exposure mean."),
+        clipped_threshold: float = typer.Option(0.03, help="Flag images above this clipped highlight ratio."),
+        noise_threshold: float = typer.Option(0.12, help="Flag images above this noise proxy score."),
+        sky_threshold: float = typer.Option(0.35, help="Flag images above this sky or reflective dominance ratio."),
+        flagged_only: bool = typer.Option(False, help="Show only flagged images in terminal output."),
         json_output: bool = typer.Option(False, "--json", help="Emit JSON to stdout or --output."),
         output: str | None = typer.Option(None, help="Write JSON report to this path when --json is set."),
         strict: bool = typer.Option(False, help="Return a non-zero exit code when blocking issues are found."),
@@ -75,6 +98,14 @@ if typer is not None:
                 mode=mode,
                 recursive=recursive,
                 fps=fps,
+                quality=quality,
+                blur_threshold=blur_threshold,
+                exposure_min=exposure_min,
+                exposure_max=exposure_max,
+                clipped_threshold=clipped_threshold,
+                noise_threshold=noise_threshold,
+                sky_threshold=sky_threshold,
+                flagged_only=flagged_only,
                 json_output=json_output,
                 output=output,
                 strict=strict,
@@ -98,6 +129,14 @@ def _build_argparse_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--mode")
     analyze_parser.add_argument("--recursive", action="store_true")
     analyze_parser.add_argument("--fps", type=float, default=2.0)
+    analyze_parser.add_argument("--quality", action="store_true")
+    analyze_parser.add_argument("--blur-threshold", type=float, default=80.0)
+    analyze_parser.add_argument("--exposure-min", type=float, default=0.20)
+    analyze_parser.add_argument("--exposure-max", type=float, default=0.80)
+    analyze_parser.add_argument("--clipped-threshold", type=float, default=0.03)
+    analyze_parser.add_argument("--noise-threshold", type=float, default=0.12)
+    analyze_parser.add_argument("--sky-threshold", type=float, default=0.35)
+    analyze_parser.add_argument("--flagged-only", action="store_true")
     analyze_parser.add_argument("--json", dest="json_output", action="store_true")
     analyze_parser.add_argument("--output")
     analyze_parser.add_argument("--strict", action="store_true")
@@ -121,6 +160,14 @@ def main(argv: list[str] | None = None) -> int:
                 mode=args.mode,
                 recursive=args.recursive,
                 fps=args.fps,
+                quality=args.quality,
+                blur_threshold=args.blur_threshold,
+                exposure_min=args.exposure_min,
+                exposure_max=args.exposure_max,
+                clipped_threshold=args.clipped_threshold,
+                noise_threshold=args.noise_threshold,
+                sky_threshold=args.sky_threshold,
+                flagged_only=args.flagged_only,
                 json_output=args.json_output,
                 output=args.output,
                 strict=args.strict,

@@ -25,6 +25,21 @@ class ReportTests(unittest.TestCase):
         self.assertIn("SplatScout Phase 1 Report", rendered)
         self.assertIn("Validation", rendered)
 
+    def test_quality_report_contains_quality_section(self) -> None:
+        report = analyze_path(
+            FIXTURES / "images_basic",
+            Phase1Config(
+                quality=True,
+                min_image_count=1,
+                warn_image_count=1,
+                blur_threshold=10_000_000.0,
+            ),
+        )
+        rendered = render_terminal_report(report)
+        self.assertIn("SplatScout Phase 2 Report", rendered)
+        self.assertIn("Quality", rendered)
+        self.assertIn("Flagged images", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()

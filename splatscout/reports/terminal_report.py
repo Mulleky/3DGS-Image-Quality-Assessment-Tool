@@ -5,11 +5,13 @@ from __future__ import annotations
 from splatscout.types import DatasetReport
 
 
-def render_terminal_report(report: DatasetReport) -> str:
+def render_terminal_report(report: DatasetReport, flagged_only: bool = False) -> str:
     summary = report.input_summary
     issue_counts = report.issue_counts
+    quality_enabled = bool(report.metadata.get("quality", {}).get("enabled"))
+    visible_records = report.flagged_image_records if flagged_only else report.image_records
     lines = [
-        "SplatScout Phase 1 Report",
+        "SplatScout Phase 2 Report" if quality_enabled else "SplatScout Phase 1 Report",
         f"Input: {summary.resolved_path}",
         f"Mode: {summary.input_mode.value}",
         f"Images: {summary.image_count}",
@@ -41,6 +43,23 @@ def render_terminal_report(report: DatasetReport) -> str:
         for skipped in report.validation_stats.skipped_checks:
             lines.append(f"- Skipped: {skipped}")
     lines.append("")
+
+    if quality_enabled:
+        quality_metadata = report.metadata.get("quality", {})
+        lines.append("Quality")
+        lines.append(f"- Analyzed images: {quality_metadata.get('analyzed_images', 0)}")
+        lines.append(f"- Flagged images: {quality_metadata.get('flagged_images', 0)}")
+        if flagged_only:
+            lines.append("- Terminal filter: flagged images only")
+        if report.flagged_image_records:
+            for record in visible_records:
+                if record.quality_metrics is None or not record.quality_metrics.flags:
+                    continue
+                flag_text = ", ".join(record.quality_metrics.flags)
+                lines.append(f"- {record.path}: {flag_text}")
+        elif flagged_only:
+            lines.append("- No flagged images to display.")
+        lines.append("")
 
     if report.recommendations:
         lines.append("Recommendations")

@@ -34,6 +34,19 @@ class ImageRecord:
     parent_relative: str | None = None
     perceptual_hash: str | None = None
     notes: list[str] = field(default_factory=list)
+    quality_metrics: ImageQualityMetrics | None = None
+
+
+@dataclass(slots=True)
+class ImageQualityMetrics:
+    blur_score: float | None = None
+    blur_type: str | None = None
+    exposure_mean: float | None = None
+    exposure_std: float | None = None
+    clipped_ratio: float | None = None
+    noise_score: float | None = None
+    sky_reflective_ratio: float | None = None
+    flags: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -111,6 +124,14 @@ class DatasetReport:
         for issue in self.issues:
             counts[issue.severity.value] += 1
         return counts
+
+    @property
+    def flagged_image_records(self) -> list[ImageRecord]:
+        return [
+            record
+            for record in self.image_records
+            if record.quality_metrics is not None and bool(record.quality_metrics.flags)
+        ]
 
 
 @dataclass(slots=True)

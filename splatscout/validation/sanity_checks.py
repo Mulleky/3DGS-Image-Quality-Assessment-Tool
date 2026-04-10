@@ -18,6 +18,7 @@ from splatscout.types import (
     utc_timestamp,
 )
 from splatscout.validation.duplicates import detect_duplicate_clusters
+from splatscout.validation.image_quality_check import run_image_quality_checks
 from splatscout.validation.scene_consistency import detect_multiple_scene_suspicion
 
 
@@ -116,6 +117,22 @@ def build_phase1_report(loaded_input: LoadedInput, config: Phase1Config) -> Data
             recommendations.append("Reduce redundant frames to save 3DGS training time without losing coverage.")
 
     issues.extend(detect_multiple_scene_suspicion(records))
+
+    quality_metadata = {
+        "enabled": bool(config.quality),
+        "analyzed_images": 0,
+        "flagged_images": 0,
+    }
+    if config.quality:
+        quality_result = run_image_quality_checks(records, config)
+        issues.extend(quality_result.issues)
+        recommendations.extend(quality_result.recommendations)
+        skipped_checks.extend(quality_result.skipped_checks)
+        quality_metadata["analyzed_images"] = quality_result.analyzed_images
+        quality_metadata["flagged_images"] = quality_result.flagged_images
+        if input_mode_value in {"colmap_text", "colmap_binary"}:
+            skipped_checks.append("Image quality checks are unavailable for COLMAP-only inputs without source image pixels.")
+
     _extend_recommendations_from_issue_codes(issues, recommendations)
 
     validation_stats = ValidationStats(
@@ -136,6 +153,7 @@ def build_phase1_report(loaded_input: LoadedInput, config: Phase1Config) -> Data
     )
 
     metadata = dict(loaded_input.metadata)
+    metadata["quality"] = quality_metadata
     metadata["issue_counts"] = {
         "info": sum(issue.severity == Severity.INFO for issue in issues),
         "warning": sum(issue.severity == Severity.WARNING for issue in issues),

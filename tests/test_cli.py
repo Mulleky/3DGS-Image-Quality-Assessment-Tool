@@ -28,6 +28,53 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 2)
 
+    def test_quality_json_includes_metrics(self) -> None:
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "analyze",
+                    str(FIXTURES / "images_basic"),
+                    "--quality",
+                    "--json",
+                    "--blur-threshold",
+                    "0",
+                    "--exposure-min",
+                    "0",
+                    "--exposure-max",
+                    "1",
+                    "--clipped-threshold",
+                    "1",
+                    "--noise-threshold",
+                    "1",
+                    "--sky-threshold",
+                    "1",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertIn("quality_metrics", payload["image_records"][0])
+
+    def test_flagged_only_filters_terminal_output(self) -> None:
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "analyze",
+                    str(FIXTURES / "images_basic"),
+                    "--quality",
+                    "--flagged-only",
+                    "--blur-threshold",
+                    "10000000",
+                ]
+            )
+
+        rendered = stdout.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Terminal filter: flagged images only", rendered)
+        self.assertIn("img_a.ppm", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()

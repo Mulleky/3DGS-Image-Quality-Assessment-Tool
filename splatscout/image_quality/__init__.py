@@ -1,1 +1,1 @@
-"""Image quality modules are added in later phases."""
+"""Image quality analysis helpers for Phase 2."""

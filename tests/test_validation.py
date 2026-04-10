@@ -28,6 +28,44 @@ class ValidationTests(unittest.TestCase):
         issue_codes = {issue.code for issue in report.issues}
         self.assertIn("mixed_orientations", issue_codes)
 
+    def test_quality_mode_populates_metrics(self) -> None:
+        report = analyze_path(
+            FIXTURES / "images_basic",
+            Phase1Config(
+                quality=True,
+                min_image_count=1,
+                warn_image_count=1,
+                blur_threshold=0.0,
+                exposure_min=0.0,
+                exposure_max=1.0,
+                clipped_threshold=1.0,
+                noise_threshold=1.0,
+                sky_threshold=1.0,
+            ),
+        )
+        self.assertTrue(all(record.quality_metrics is not None for record in report.image_records))
+        self.assertEqual(report.metadata["quality"]["analyzed_images"], 3)
+
+    def test_quality_mode_skips_colmap_without_crashing(self) -> None:
+        report = analyze_path(
+            FIXTURES / "colmap_text",
+            Phase1Config(quality=True),
+        )
+        skipped = "\n".join(report.validation_stats.skipped_checks)
+        self.assertIn("Image quality checks are unavailable for COLMAP-only inputs", skipped)
+
+    def test_quality_mode_emits_flagged_issue(self) -> None:
+        report = analyze_path(
+            FIXTURES / "images_basic",
+            Phase1Config(
+                quality=True,
+                min_image_count=1,
+                warn_image_count=1,
+                blur_threshold=10_000_000.0,
+            ),
+        )
+        self.assertIn("flagged_image_quality", {issue.code for issue in report.issues})
+
 
 if __name__ == "__main__":
     unittest.main()
